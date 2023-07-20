@@ -11,7 +11,6 @@ handler500 = 'pages.views.internal_server_error'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls')),
-    path('auth/', include('django.contrib.auth.urls')),
     path(
         'auth/registration/',
         CreateView.as_view(
@@ -21,6 +20,7 @@ urlpatterns = [
         ),
         name='registration',
     ),
+    path('auth/', include('django.contrib.auth.urls')),
     path('', include('blog.urls')),
 ]
 

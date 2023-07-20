@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
 
 from core.models import BaseModel, PublishModel
 
@@ -84,6 +85,10 @@ class Post(PublishModel):
         """Set the field title as a string representation of a class."""
         return self.title[:MODEL_NAME_LENGTH]
 
+    def get_absolute_url(self):
+        """Redefine get_absolute_url method."""
+        return reverse('blog:post_detail', args=[self.pk])
+
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
@@ -105,6 +110,10 @@ class Comment(BaseModel):
         verbose_name='Пост',
         on_delete=models.CASCADE,
     )
+
+    def __str__(self):
+        """Set the field text as a string representation of a class."""
+        return self.text[:MODEL_NAME_LENGTH]
 
     class Meta:
         verbose_name = 'комментарий'
