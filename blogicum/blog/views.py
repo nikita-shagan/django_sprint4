@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils import timezone as tz
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   UpdateView)
@@ -71,7 +71,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return reverse('blog:profile', args=[self.request.user.username])
 
 
-class PostObjectMixin(BaseDetailView):
+class PostObjectMixin(BaseDetailView, PostObjects):
     """Define post model attribute and get_object method."""
 
     model = Post
@@ -79,7 +79,7 @@ class PostObjectMixin(BaseDetailView):
     def get_object(self, queryset=None):
         """Reduce the amount of queries to database."""
         return get_object_or_404(
-            PostObjects().add_related().get_all(),
+            self.add_related().get_all(),
             pk=self.kwargs.get('post_id')
         )
 
@@ -90,10 +90,15 @@ class PostDetailView(PostObjectMixin, DetailView):
     template_name = 'blog/detail.html'
 
     def dispatch(self, request, *args, **kwargs):
-        """Allow only post creator to see post which isn't published."""
+        """Allow only post creator to see a post which isn't published."""
         post = self.get_object()
-        not_owner = post.author != request.user
-        if not_owner and (not post.is_published or post.pub_date > tz.now()):
+        if (
+            post.author != request.user
+            and (
+                not post.is_published
+                or post.pub_date > tz.now()
+            )
+        ):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 
@@ -122,10 +127,6 @@ class PostUpdateView(PostProtectedMixin, UpdateView):
     """UpdateView class for updating posts."""
 
     form_class = PostForm
-
-    def get_success_url(self, **kwargs):
-        """Redefine success_url to post detail page."""
-        return reverse('blog:post_detail', args=[self.object.pk])
 
 
 class PostDeleteView(PostProtectedMixin, DeleteView):
@@ -175,8 +176,7 @@ class CommentProtectedView(LoginRequiredMixin, BaseDetailView):
 
     def dispatch(self, request, *args, **kwargs):
         """Protect comment by owner checking."""
-        comment_object = self.get_object()
-        if comment_object.author != request.user:
+        if self.get_object().author != request.user:
             return redirect('blog:post_detail', kwargs['post_id'])
 
         return super().dispatch(request, *args, **kwargs)
@@ -202,8 +202,10 @@ class CommentUpdateView(CommentProtectedView, UpdateView):
 class CommentDeleteView(CommentProtectedView, DeleteView):
     """DeleteView class for deleting comments."""
 
+    pass
 
-class CategoryPostsListView(ListView):
+
+class CategoryPostsListView(ListView, PostObjects):
     """ListView class with posts in particular category."""
 
     model = Post
@@ -219,7 +221,7 @@ class CategoryPostsListView(ListView):
             is_published=True
         )
         return (
-            PostObjects()
+            self
             .apply_all_filters()
             .get_all()
             .filter(category=self.category)
@@ -232,7 +234,7 @@ class CategoryPostsListView(ListView):
         return context
 
 
-class ProfilePostsListView(ListView):
+class ProfilePostsListView(ListView, PostObjects):
     """ListView class with posts created by particular author."""
 
     model = Post
@@ -247,7 +249,7 @@ class ProfilePostsListView(ListView):
             username=self.kwargs.get('username')
         )
 
-        posts = PostObjects().add_related().add_comments()
+        posts = self.add_related().add_comments()
         return (
             posts.get_all()
             if self.request.user == self.author
@@ -274,7 +276,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         """Redefine success_url to user's profile page."""
-        return reverse_lazy('blog:profile', args=[self.request.user.username])
+        return reverse('blog:profile', args=[self.request.user.username])
 
 
 class IndexListView(ListView):

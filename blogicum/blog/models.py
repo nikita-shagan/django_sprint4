@@ -81,6 +81,12 @@ class Post(PublishModel):
     )
     image = models.ImageField('Фото', upload_to='post_images', blank=True)
 
+    class Meta:
+        verbose_name = 'публикация'
+        verbose_name_plural = 'Публикации'
+        ordering = ('-pub_date',)
+        default_related_name = 'posts'
+
     def __str__(self):
         """Set the field title as a string representation of a class."""
         return self.title[:MODEL_NAME_LENGTH]
@@ -88,12 +94,6 @@ class Post(PublishModel):
     def get_absolute_url(self):
         """Redefine get_absolute_url method."""
         return reverse('blog:post_detail', args=[self.pk])
-
-    class Meta:
-        verbose_name = 'публикация'
-        verbose_name_plural = 'Публикации'
-        ordering = ('-pub_date',)
-        default_related_name = 'posts'
 
 
 class Comment(BaseModel):
@@ -111,12 +111,12 @@ class Comment(BaseModel):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        """Set the field text as a string representation of a class."""
-        return self.text[:MODEL_NAME_LENGTH]
-
     class Meta:
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
         ordering = ('created_at',)
         default_related_name = 'comments'
+
+    def __str__(self):
+        """Set the field text as a string representation of a class."""
+        return self.text[:MODEL_NAME_LENGTH]
